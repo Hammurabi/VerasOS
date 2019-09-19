@@ -6,8 +6,10 @@ public class Stack {
     private int                             maxUsed;
     private int                             used;
     private int                             heap;
+    private int                             funcheap;
     private final Kernel                    kernel;
     private int                             index;
+    private int                             funcindex;
 
     public Stack(final Kernel kernel) throws MemoryException {
         this(kernel, 1024 * 12);
@@ -16,6 +18,7 @@ public class Stack {
     public Stack(final Kernel kernel, final int size) throws MemoryException {
         this.kernel     = kernel;
         this.heap       = kernel.getMemoryBlock().malloc(size);
+        this.funcheap   = kernel.getMemoryBlock().malloc(1024);
     }
 
     public void resize(int size)
@@ -45,7 +48,35 @@ public class Stack {
         return kernel.getMemoryBlock().getLong(heap + address);
     }
 
-    public void push(long v)
+    public void register(long x, int index) throws MemoryException {
+        int func = peekstack();
+        kernel.getMemoryBlock().setLong(func + 4 + (index * 8), x);
+    }
+
+    public void pushstack(int funcaddr) throws MemoryException {
+        int function = kernel.getMemoryBlock().malloc(4 + 256);
+        kernel.getMemoryBlock().setInt(function, funcaddr);
+        kernel.getMemoryBlock().setLong(funcheap + funcindex, function);
+        funcindex += 4;
+//        if (funcindex >= (sizeOf() - 32))
+//            resize(256);
+    }
+
+    public int popstack() throws MemoryException {
+        funcindex -= 4;
+        int function    = kernel.getMemoryBlock().getInt(funcheap + funcindex);
+        int funcaddr    = kernel.getMemoryBlock().getInt(function);
+
+        kernel.getMemoryBlock().delete(function);
+        return funcaddr;
+    }
+
+    public int peekstack() throws MemoryException {
+        int function    = kernel.getMemoryBlock().getInt(funcheap + funcindex);
+        return function;
+    }
+
+        public void push(long v)
     {
         kernel.getMemoryBlock().setLong(heap + index, v);
         index += 8;
@@ -65,7 +96,7 @@ public class Stack {
 
     public long peek()
     {
-        return kernel.getMemoryBlock().getLong(heap + (index - 4));
+        return kernel.getMemoryBlock().getLong(heap + (index - 8));
     }
 
     public void delete() throws MemoryException {

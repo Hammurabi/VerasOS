@@ -107,6 +107,8 @@ public class SharedProcess implements Runnable, Comparable<SharedProcess> {
 
     @Override
     public int compareTo(SharedProcess o) {
+        if (isIdle())
+            return 1;
         return getActiveProcesses() > o.getActiveProcesses() ? -1 : 1;
     }
 

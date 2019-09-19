@@ -15,7 +15,8 @@ public abstract class Kernel {
     ///// returns a new process.
     ///// returns null and throws an exception if the operation is unsuccessful.
     public abstract Process generateProcess(final Process process) throws MemoryException;
-    public Process generateProcess() throws MemoryException { return generateProcess(null); }
+    public Process  generateProcess() throws MemoryException { return generateProcess(null); }
+    public abstract void executeProcess(final Process process);
     ///// forces the process to halt
     ///// frees the processID
     ///// throws exception and blocks the Shared block if operation is unsuccessful

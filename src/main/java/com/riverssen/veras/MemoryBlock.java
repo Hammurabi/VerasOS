@@ -23,4 +23,6 @@ public interface MemoryBlock {
     int getInt(int address) throws IndexOutOfBoundsException;
     long getLong(int address) throws IndexOutOfBoundsException;
     int sizeof(int address);
+
+    byte[] getArray(int length, int address);
 }

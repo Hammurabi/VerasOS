@@ -18,6 +18,7 @@ public class Process implements Comparable<Process> {
     private final Stack     stack;
     private int             program;
     private int             index;
+    private int             offset;
     private AtomicBoolean   active;
     private AtomicBoolean   halted;
     private Set<Integer>    subprocesses;
@@ -33,12 +34,13 @@ public class Process implements Comparable<Process> {
         this.stack          = new Stack(kernel, 1024 * 12);
         this.active         = new AtomicBoolean(true);
         this.halted         = new AtomicBoolean(true);
+        this.offset         = 0;
         this.subprocesses   = Collections.synchronizedSet(new LinkedHashSet<>());
         this.priority       = new AtomicInteger(10);
         this.cycle          = new AtomicLong(0);
     }
 
-    public void execute(byte program[]) throws ProcessException, MemoryException {
+    public void setProgram(byte program[]) throws ProcessException, MemoryException {
         if (this.program != 0)
             throw new ProcessException("process already being used.");
         this.program    = heap.createReadOnly(program);
@@ -168,5 +170,13 @@ public class Process implements Comparable<Process> {
 
     public void setProgramIndex(int prccessIndex) {
         this.index = prccessIndex;
+    }
+
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+
+    public int getOffset() {
+        return offset;
     }
 }

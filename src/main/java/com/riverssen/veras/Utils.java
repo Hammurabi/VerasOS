@@ -171,4 +171,14 @@ public class Utils {
             buf[i] = bytes[bytes.length - 1 - i];
         return buf;
     }
+
+    public static byte firstByte(int x)
+    {
+        return  (byte) ((x >> 24) & 0xFF);
+    }
+
+    public static int castint24(int x)
+    {
+        return makeInt((byte) 0, (byte) ((x >> 16) & 0xFF), (byte) ((x >>  8) & 0xFF), (byte) ((x) & 0xFF));
+    }
 }

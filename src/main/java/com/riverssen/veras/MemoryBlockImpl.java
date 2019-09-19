@@ -2,10 +2,7 @@ package com.riverssen.veras;
 
 import com.riverssen.veras.exceptions.MemoryException;
 
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class MemoryBlockImpl implements MemoryBlock {
     private final byte                      heapBuffer[];
@@ -217,5 +214,10 @@ public class MemoryBlockImpl implements MemoryBlock {
         if (addresses.containsKey(address))
             return addresses.get(address);
         return 0;
+    }
+
+    @Override
+    public byte[] getArray(int length, int address) {
+        return Arrays.copyOfRange(heapBuffer, address, address + length);
     }
 }

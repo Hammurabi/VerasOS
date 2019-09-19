@@ -258,10 +258,29 @@ public class Heap {
     public int sizeof(int address) {
         if (addresses.containsKey(address))
             return addresses.get(address);
+
         return 0;
     }
 
     public void delete() throws MemoryException {
         kernel.getMemoryBlock().delete(heap);
+    }
+
+    public void setArrayFromBlock(int addr, int array, int len) {
+        for (int i = 0; i < len; i ++)
+            setByte(addr + i, kernel.getMemoryBlock().getByte(array + i));
+    }
+
+    public void setArray(int addr, byte array[]) {
+    }
+
+    public byte[] getArray(int padd) throws IndexOutOfBoundsException {
+        int len = sizeof(padd);
+        byte a[]= new byte[len];
+
+        for (int i = 0; i < len; i ++)
+            a[i] = getByte(padd + i);
+
+        return a;
     }
 }

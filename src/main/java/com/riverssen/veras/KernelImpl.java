@@ -10,6 +10,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+//// Kernel implementation
+//// This implementation does not allow floating point arithmetic
+//// A rational-float (rfp_t) is in the todo list.
 public class KernelImpl extends Kernel {
     private final MemoryBlock           memoryBlock;
     private final StorageBlock          storageBlock;
@@ -69,6 +72,16 @@ public class KernelImpl extends Kernel {
     }
 
     @Override
+    public void executeProcess(Process process) {
+        Queue<SharedProcess> processes = new PriorityQueue<>();
+        for (int p = 0; p < this.processes.length; p++)
+            if (this.processes[p].awake())
+                processes.add(this.processes[p]);
+
+        processes.poll().executeProcess(process);
+    }
+
+    @Override
     public void haltProcess(Process process) {
         process.halt();
         for (SharedProcess sharedProcess : processes)
@@ -105,7 +118,7 @@ public class KernelImpl extends Kernel {
         keepAlive.set(false);
     }
 
-    private static final byte
+    public static final byte
             //push a 32bit integer to the stack
             //
             OP_PUSH         = 0,
@@ -114,32 +127,51 @@ public class KernelImpl extends Kernel {
             OP_LPSH         = 1,
             //generate a new process
             OP_PROC         = 2,
+            OP_PROCFUN      = 3,
             //execute process
             //pop the processID from the stack
             //lookup the process and execute it.
-            OP_PRCE         = 3,
-            OP_ADD          = 4,
-            OP_SUB          = 5,
-            OP_MUL          = 6,
-            OP_DIV          = 7,
-            OP_MOD          = 8,
-            OP_EQUALS       = 9,
-            OP_LOGAND       = 10,
-            OP_LOGOR        = 11,
-            OP_LOGSHFT      = 12,
-            OP_AND          = 13,
-            OP_OR           = 14,
-            OP_XOR          = 15,
-            OP_NOT          = 16,
-            OP_LSHIFT       = 17,
-            OP_RSHIFT       = 18,
+            OP_PRCE         = 4 ,
+            OP_ADD          = 5 ,
+            OP_SUB          = 6 ,
+            OP_MUL          = 7 ,
+            OP_DIV          = 8 ,
+            OP_MOD          = 9 ,
+            OP_EQUALS       = 10,
+            OP_LOGAND       = 11,
+            OP_LOGOR        = 12,
+            OP_LOGSHFT      = 13,
+            OP_AND          = 14,
+            OP_OR           = 15,
+            OP_XOR          = 16,
+            OP_NOT          = 17,
+            OP_LSHIFT       = 18,
+            OP_RSHIFT       = 19,
+            OP_ISTORE       = 20,
+            OP_ILOAD        = 21,
+            OP_JUMP         = 22,
+            OP_IF           = 23,
+            OP_CMPG         = 24,
+            OP_CMPL         = 25,
+            OP_CMPGE        = 26,
+            OP_CMPLE        = 27,
+            OP_APUSH        = 28,
+            OP_PRINT        = 29,
+            OP_POP          = 30,
+            OP_DREF         = 31,
+            OP_AREF         = 32,
+            OP_CALL         = 33,
 
             OP_HALT         = 127;
 
     @Override
     public int executeProgram(final Process process, Heap heap, Stack stack, int program, int steps) throws ExecutionException {
         MemoryBlock block = getMemoryBlock();
-        for (int i = 0; i < steps; i ++)
+
+        int len = block.sizeof(process.getProgram());
+        int max = process.getProgram() + len;
+
+        for (int i = 0; (i < steps) && (program < max); i ++)
         {
             int instruction = block.getByte(program ++);
 
@@ -173,33 +205,41 @@ public class KernelImpl extends Kernel {
                         throw new ExecutionException("could not generate new process.");
                     }
                     break;
-                case OP_PRCE:
-                    int procssIDX = block.getInt(program);
+                case OP_PROCFUN:
+                    int proID = (int) stack.pop();
+                    int procFunProgram = block.getInt(program);
                     program += 4;
+                    final Process procfun = processMap.get(proID);
+
+                    if (procfun == null)
+                        throw new ExecutionException("could not convert to process by id '" + Long.toHexString(proID) + "'.");
+
+                    try {
+                        procfun.setProgram(process.getProgram() + procFunProgram);
+//                        procfun.setOffset(procFunProgram);
+                    } catch (ProcessException e) {
+                        throw new ExecutionException("could not set process func by id '" + Long.toHexString(proID) + "'.");
+                    }
+                    break;
+                case OP_PRCE:
                     int processID = (int) stack.pop();
 
                     final Process eProcess = processMap.get(processID);
                     if (eProcess == null)
                         throw new ExecutionException("could not execute by process id '" + Long.toHexString(processID) + "'.");
 
-                    try {
-                        eProcess.setProgram(process.getProgram());
-                        eProcess.setProgramIndex(procssIDX);
-                    } catch (ProcessException e) {
-                        throw new ExecutionException("could not execute by process id '" + Long.toHexString(processID) + "'.");
-                    }
+//                    Queue<SharedProcess> processes = new PriorityQueue<>();
+//                    for (int p = 0; p < this.processes.length; p++)
+//                        if (this.processes[i].awake())
+//                            processes.add(this.processes[i]);
+//                    try {
+//                        Objects.requireNonNull(processes.poll()).executeProcess(eProcess);
+//                    } catch (NullPointerException e)
+//                    {
+//                        throw new ExecutionException("could not execute by process id '" + Long.toHexString(processID) + "'.");
+//                    }
 
-                    Queue<SharedProcess> processes = new PriorityQueue<>();
-                    for (int p = 0; p < this.processes.length; p++)
-                        if (this.processes[i].awake())
-                            processes.add(this.processes[i]);
-
-                    try {
-                        Objects.requireNonNull(processes.poll()).executeProcess(eProcess);
-                    } catch (NullPointerException e)
-                    {
-                        throw new ExecutionException("could not execute by process id '" + Long.toHexString(processID) + "'.");
-                    }
+                    executeProcess(eProcess);
                     break;
                 case OP_ADD:
                     stack.push(stack.pop() + stack.pop());
@@ -254,6 +294,56 @@ public class KernelImpl extends Kernel {
                     else
                         haltProcessRecursive(process.getProcessID());
                     break;
+
+                    //TODO: add implementation.
+                case OP_ISTORE: break;
+                case OP_ILOAD: break;
+
+                case OP_JUMP:
+                    int jumpIndex = block.getInt(program);
+                    program = jumpIndex;
+                    break;
+                case OP_IF:
+                    boolean condition = stack.pop() > 0;
+                    if (condition)
+                    {
+                    }
+                    break;
+                case OP_CMPG: stack.push(stack.pop() > stack.pop() ? 1 : 0); break;
+                case OP_CMPL: stack.push(stack.pop() < stack.pop() ? 1 : 0); break;
+                case OP_CMPGE: stack.push(stack.pop() >= stack.pop() ? 1 : 0); break;
+                case OP_CMPLE: stack.push(stack.pop() <= stack.pop() ? 1 : 0); break;
+                case OP_APUSH:
+                    int alen = block.getShort(program);
+                    try {
+                        int addr = heap.malloc(alen);
+                        heap.setArrayFromBlock(addr, program + 2, alen);
+                        stack.push(addr);
+                    } catch (MemoryException e) {
+                        throw new ExecutionException(e.getMessage());
+                    }
+                    program += (alen + 2);
+                    break;
+                case OP_PRINT:
+                    int padd = (int) stack.pop();
+                    System.out.println(new String(heap.getArray(padd)));
+                    break;
+                case OP_CALL:
+                    int fadd    = (int) stack.pop();
+                    byte typ    = Utils.firstByte(fadd);
+                    fadd        = Utils.castint24(fadd);
+
+                    System.out.println("call func: " + fadd + " of type: " + typ);
+
+                    break;
+            }
+        }
+
+        if (program >= max) {
+            try {
+                stack.popstack();
+            } catch (MemoryException e) {
+                throw new ExecutionException(e.toString());
             }
         }
 
